@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@theme {
+  --color-cyan-400: #61d8d1;
+  --color-cyan-500: #41c8c1;
+  --color-cyan-300: #88e4dd;
+  --color-cyan-200: #b5efe9;
+}
+
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -19,11 +26,11 @@
 }
 
 .glow-cyan {
-  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.3);
+  text-shadow: 0 0 10px rgba(97, 216, 209, 0.6), 0 0 20px rgba(97, 216, 209, 0.3);
 }
 
 .glow-box-cyan {
-  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.25);
+  box-shadow: 0 0 25px -5px rgba(97, 216, 209, 0.25);
 }
 
 .glow-box-green {
@@ -42,7 +49,7 @@
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #06b6d4;
+  background: #61d8d1;
 }
 
 /* Gallery Marquee animation */
@@ -70,14 +77,14 @@
 /* Subtle Neon Glow effect for Logo */
 @keyframes subtle-neon-pulse {
   0%, 100% {
-    filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.45))
-            drop-shadow(0 0 12px rgba(6, 182, 212, 0.35))
-            drop-shadow(0 0 24px rgba(45, 212, 191, 0.2));
+    filter: drop-shadow(0 0 4px rgba(97, 216, 209, 0.45))
+            drop-shadow(0 0 12px rgba(97, 216, 209, 0.35))
+            drop-shadow(0 0 24px rgba(97, 216, 209, 0.2));
   }
   50% {
-    filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.6))
-            drop-shadow(0 0 16px rgba(6, 182, 212, 0.45))
-            drop-shadow(0 0 32px rgba(45, 212, 191, 0.3));
+    filter: drop-shadow(0 0 6px rgba(97, 216, 209, 0.6))
+            drop-shadow(0 0 16px rgba(97, 216, 209, 0.45))
+            drop-shadow(0 0 32px rgba(97, 216, 209, 0.3));
   }
 }
 
@@ -87,8 +94,9 @@
 }
 
 .group\/logo:hover .logo-neon-glow {
-  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.8))
-          drop-shadow(0 0 20px rgba(6, 182, 212, 0.6))
-          drop-shadow(0 0 36px rgba(45, 212, 191, 0.4));
+  filter: drop-shadow(0 0 8px rgba(97, 216, 209, 0.8))
+          drop-shadow(0 0 20px rgba(97, 216, 209, 0.6))
+          drop-shadow(0 0 36px rgba(97, 216, 209, 0.4));
 }
+
 

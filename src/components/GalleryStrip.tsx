@@ -55,9 +55,9 @@ export const GALLERY_PHOTOS: GalleryPhoto[] = [
   {
     id: 'gal-7',
     src: '/galeria7.jpg',
-    alt: 'Galería techada y comodidades',
-    title: 'Galería & Quincho',
-    tag: 'Comodidad',
+    alt: 'Iluminación y ambiente de noche en la quinta',
+    title: 'Noches Mágicas',
+    tag: 'Nocturno',
   },
   {
     id: 'gal-8',
