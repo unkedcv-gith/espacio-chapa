@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FAQS } from '../data/venueData';
-import { HelpCircle, ChevronDown, Sparkles } from 'lucide-react';
+import { HelpCircle, ChevronDown } from 'lucide-react';
 
 export const FaqSection: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<string | null>(FAQS[0].id);

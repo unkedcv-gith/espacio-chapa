@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AMENITIES } from '../data/venueData';
 import { Amenity } from '../types';
-import { Waves, UtensilsCrossed, Home, Trees, Trophy, ShieldCheck, Check, Sparkles, X, ChevronRight, Flame, Umbrella, LayoutGrid } from 'lucide-react';
+import { Waves, UtensilsCrossed, Home, Trees, Trophy, ShieldCheck, Check, CheckCircle2, X, ChevronRight, Flame, Umbrella, LayoutGrid } from 'lucide-react';
 
 interface AmenitiesProps {
   onSelectAmenityForQuote?: (amenityId: string) => void;
@@ -29,7 +29,7 @@ export const Amenities: React.FC<AmenitiesProps> = () => {
       case 'Umbrella':
         return <Umbrella className="w-6 h-6 text-amber-300" />;
       default:
-        return <Sparkles className="w-6 h-6 text-cyan-400" />;
+        return <CheckCircle2 className="w-6 h-6 text-cyan-400" />;
     }
   };
 

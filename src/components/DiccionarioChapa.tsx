@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Heart, Laugh, SmilePlus } from 'lucide-react';
+import { Lightbulb, Heart, Laugh, SmilePlus } from 'lucide-react';
 
 export const DiccionarioChapa: React.FC = () => {
   const dictionaryEntries = [
@@ -12,7 +12,7 @@ export const DiccionarioChapa: React.FC = () => {
     {
       phrase: 'Se nos vuelan las chapas de pensar...',
       meaning: 'Pensando en cada detalle para que vos sólo vengas a disfrutar.',
-      icon: Sparkles,
+      icon: Lightbulb,
       color: 'from-cyan-500/20 to-blue-500/10 border-cyan-500/30 text-cyan-300',
     },
     {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { VENUE_INFO } from '../data/venueData';
-import { MessageCircle, X, Sparkles, Send, Calendar, CheckCircle2, ChevronRight } from 'lucide-react';
+import { MessageCircle, X, Send, Calendar, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Logo } from './Logo';
 
 export const WhatsAppFloating: React.FC = () => {

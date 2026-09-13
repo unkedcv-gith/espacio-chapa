@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Camera, ZoomIn, X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Camera, ZoomIn, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
 
 export interface GalleryPhoto {
   id: string;
@@ -211,7 +211,7 @@ export const GalleryStrip: React.FC = () => {
                 {/* Top Category Tag */}
                 <div className="absolute top-3 left-3 z-10">
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-[10px] sm:text-xs font-semibold text-slate-200 shadow-sm">
-                    <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                    <Tag className="w-2.5 h-2.5 text-cyan-400" />
                     {photo.tag}
                   </span>
                 </div>

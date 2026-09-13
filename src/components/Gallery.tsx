@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { GALLERY_IMAGES, VENUE_INFO } from '../data/venueData';
 import { GalleryImage } from '../types';
-import { Sparkles, Maximize2, ChevronLeft, ChevronRight, X, MessageCircle, Eye, Camera } from 'lucide-react';
+import { Maximize2, ChevronLeft, ChevronRight, X, MessageCircle, Eye, Camera } from 'lucide-react';
 
 export const Gallery: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');

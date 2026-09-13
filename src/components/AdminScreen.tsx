@@ -14,7 +14,7 @@ import {
   Eye,
   ShieldCheck,
   Clock,
-  Sparkles,
+  PartyPopper,
   Share2,
   Check,
   RotateCcw,
@@ -488,7 +488,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
           <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Findes Ocupados</span>
-              <Sparkles className="w-4 h-4 text-amber-400" />
+              <PartyPopper className="w-4 h-4 text-amber-400" />
             </div>
             <div className="text-3xl font-black text-amber-400">{weekendReservations}</div>
             <p className="text-[11px] text-slate-400 mt-1">Sábados o Domingos reservados</p>
