@@ -1,0 +1,6 @@
+{
+  "name": "Espacio Chapa - Quinta de Eventos",
+  "description": "Quinta para eventos y alquiler diurno: pileta de 10x4 mts, parque, parrilla, disco de arado, horno a leña, salón para 50 personas con Wi-Fi y vajilla, amplia cocina con heladera y freezer, dos vestuarios con ducha, pool y metegol.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
