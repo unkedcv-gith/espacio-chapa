@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
   MapPin,
+  Instagram,
 } from 'lucide-react';
 
 interface ContactFormProps {
@@ -116,7 +117,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         {/* 2-Column Integrated Layout: Calendar on the left, Form on the right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Compact Calendar */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5 space-y-4">
             {/* Integrated Compact Calendar */}
             <BookingCalendar
               selectedDate={formData.eventDate}
@@ -126,6 +127,31 @@ export const ContactForm: React.FC<ContactFormProps> = ({
               }}
               blockedDates={blockedDates}
             />
+
+            {/* Direct Instagram Badge */}
+            <a
+              href={VENUE_INFO.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-pink-950/30 to-slate-900 border border-slate-800 hover:border-pink-500/40 text-slate-300 hover:text-white transition-all shadow-md group/igcard"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-pink-600 to-amber-500 flex items-center justify-center text-white shadow-md group-hover/igcard:scale-105 transition-transform">
+                  <Instagram className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white group-hover/igcard:text-pink-300 transition-colors">
+                    Seguinos en Instagram
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Mirá fotos reales, historias y videos de eventos
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-bold text-pink-400 px-2.5 py-1 rounded-full bg-pink-950/60 border border-pink-500/30">
+                {VENUE_INFO.instagram}
+              </span>
+            </a>
           </div>
 
           {/* Right Column: Contact & Booking Form */}

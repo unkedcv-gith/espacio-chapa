@@ -101,6 +101,17 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenAdminModal })
                 <Mail className="w-4 h-4 text-cyan-400 shrink-0" />
                 <span className="text-slate-300">{VENUE_INFO.email}</span>
               </li>
+              <li className="flex items-center gap-2">
+                <Instagram className="w-4 h-4 text-pink-400 shrink-0" />
+                <a
+                  href={VENUE_INFO.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-300 hover:text-pink-300 transition-colors"
+                >
+                  {VENUE_INFO.instagram}
+                </a>
+              </li>
             </ul>
           </div>
         </div>
