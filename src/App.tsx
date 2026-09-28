@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
-import { DiccionarioChapa } from './components/DiccionarioChapa';
+import { SomosEspacioChapa } from './components/SomosEspacioChapa';
 import { Amenities } from './components/Amenities';
 import { GalleryStrip } from './components/GalleryStrip';
 import { Reviews } from './components/Reviews';
@@ -98,8 +98,8 @@ export default function App() {
         {/* 1. Hero Section */}
         <Hero onOpenVisitModal={() => setIsVisitModalOpen(true)} />
 
-        {/* 2. Diccionario CHAPA & Concept */}
-        <DiccionarioChapa />
+        {/* 2. Identidad: Somos Espacio Chapa */}
+        <SomosEspacioChapa />
 
         {/* 3. Installations & Amenities */}
         <Amenities />

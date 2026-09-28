@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { VENUE_INFO } from '../data/venueData';
-import { MapPin, Navigation, Car, Shield, Clock, ExternalLink, Compass, PhoneCall, Copy, Check } from 'lucide-react';
+import { MapPin, Navigation, Route, Car, Clock, ExternalLink, Compass, Copy, Check } from 'lucide-react';
 
 export const LocationMap: React.FC = () => {
   const [copiedAddress, setCopiedAddress] = useState(false);
@@ -74,7 +74,7 @@ export const LocationMap: React.FC = () => {
               {/* Quick Route Points */}
               <div className="space-y-4 pt-4 border-t border-slate-800">
                 <div className="flex items-start gap-3">
-                  <Car className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                  <Route className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs font-bold text-white">Accesibilidad Directa</p>
                     <p className="text-xs text-slate-400">
@@ -84,11 +84,11 @@ export const LocationMap: React.FC = () => {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <Car className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-bold text-white">Estacionamiento Propio & Seguro</p>
+                    <p className="text-xs font-bold text-white">Estacionamiento Propio</p>
                     <p className="text-xs text-slate-400">
-                      Capacidad para más de 35 autos dentro del predio privado, portón automatizado y personal de control.
+                      Capacidad para 7 vehículos en el frente del espacio.
                     </p>
                   </div>
                 </div>
@@ -96,9 +96,9 @@ export const LocationMap: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <Clock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-bold text-white">Visitas Guiadas</p>
+                    <p className="text-xs font-bold text-white">Visitas</p>
                     <p className="text-xs text-slate-400">
-                      {VENUE_INFO.openingHours}
+                      Con coordinación previa.
                     </p>
                   </div>
                 </div>

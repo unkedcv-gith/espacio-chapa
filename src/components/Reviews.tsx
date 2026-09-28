@@ -1,6 +1,6 @@
 import React from 'react';
 import { TESTIMONIALS, VENUE_INFO } from '../data/venueData';
-import { Star, CheckCircle, MessageSquare } from 'lucide-react';
+import { Star, CheckCircle, MessageSquare, ExternalLink } from 'lucide-react';
 
 export const Reviews: React.FC = () => {
   return (
@@ -10,36 +10,45 @@ export const Reviews: React.FC = () => {
       <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-emerald-950/15 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Header with Overall Google Rating */}
+        {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs font-semibold mb-3">
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>Opiniones de Quienes Ya Festejaron</span>
+            <span>Opiniones de quienes ya nos conocen</span>
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4">
-            Familias y amigos felices
+            Familia y amigos que nos eligen
           </h2>
 
-          {/* Rating Badge */}
-          <div className="inline-flex items-center gap-3 p-3 px-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl mt-2">
+          {/* Rating Badge with direct link to Google Reviews */}
+          <div className="inline-flex flex-wrap items-center justify-center gap-3 p-3 px-5 sm:px-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl mt-2">
             <div className="flex items-center gap-1 text-yellow-400">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="w-5 h-5 fill-yellow-400" />
               ))}
             </div>
-            <span className="text-xl font-black text-white">{VENUE_INFO.googleRating}</span>
-            <span className="text-xs text-slate-400 border-l border-slate-700 pl-3">
-              Basado en <strong>+{VENUE_INFO.googleReviewCount} reseñas</strong> en Google Maps
+            <span className="text-sm font-semibold text-slate-200">
+              Calificación en Google
             </span>
+            <a
+              href={VENUE_INFO.googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-slate-950 text-xs font-bold border border-cyan-500/30 transition-all cursor-pointer ml-1"
+              title="Abrir reseñas en Google Maps"
+            >
+              <span>Ver reseñas reales</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
           </div>
         </div>
 
         {/* Reviews Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {TESTIMONIALS.map((t) => (
             <div
               key={t.id}
-              className="bg-slate-950/80 border border-slate-800/80 hover:border-cyan-500/40 rounded-2xl p-6 flex flex-col justify-between shadow-lg transition-all hover:-translate-y-1 duration-300"
+              className="bg-slate-900/80 border border-slate-800/80 hover:border-cyan-500/40 rounded-2xl p-6 flex flex-col justify-between shadow-lg transition-all hover:-translate-y-1 duration-300"
             >
               <div>
                 {/* Rating Stars */}
@@ -59,17 +68,23 @@ export const Reviews: React.FC = () => {
 
                 {/* Comment */}
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed italic mb-6">
-                  "{t.comment}"
+                  &ldquo;{t.comment}&rdquo;
                 </p>
               </div>
 
               {/* Author */}
               <div className="flex items-center gap-3 pt-4 border-t border-slate-800/60">
-                <img
-                  src={t.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                  alt={t.author}
-                  className="w-9 h-9 rounded-full object-cover border border-slate-700"
-                />
+                {t.avatarUrl ? (
+                  <img
+                    src={t.avatarUrl}
+                    alt={t.author}
+                    className="w-9 h-9 rounded-full object-cover border border-slate-700"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-cyan-300 font-bold text-xs shrink-0">
+                    {t.author.charAt(0)}
+                  </div>
+                )}
                 <div>
                   <h4 className="text-xs font-bold text-white flex items-center gap-1">
                     <span>{t.author}</span>
@@ -82,6 +97,19 @@ export const Reviews: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Bottom CTA to View & Write Google Reviews */}
+        <div className="mt-12 text-center">
+          <a
+            href={VENUE_INFO.googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500/40 text-slate-200 hover:text-white text-xs sm:text-sm font-semibold transition-all shadow-lg hover:shadow-cyan-950/30 cursor-pointer"
+          >
+            <span>Ver perfil y opiniones en Google Maps</span>
+            <ExternalLink className="w-4 h-4 text-cyan-400" />
+          </a>
         </div>
       </div>
     </section>

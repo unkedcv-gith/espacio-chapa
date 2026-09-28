@@ -203,45 +203,75 @@ export const BookingCalendar: React.FC<BookingCalendarProps> = ({
         ))}
       </div>
 
-      {/* Days Grid - Clean and compact public view */}
-      <div className="grid grid-cols-7 gap-1">
-        {calendarDays.map((cell) => {
-          const dateObjNoTime = new Date(cell.dateObj);
-          dateObjNoTime.setHours(0, 0, 0, 0);
+       {/* Days Grid - Clean and compact public view */}
+       <div className="grid grid-cols-7 gap-1">
+         {calendarDays.map((cell) => {
+           const dateObjNoTime = new Date(cell.dateObj);
+           dateObjNoTime.setHours(0, 0, 0, 0);
+ 
+           const isPast = dateObjNoTime < today;
+           const isToday = dateObjNoTime.getTime() === today.getTime();
+           const isSelected = selectedDate === cell.dateKey;
+           const isWeekend = cell.dateObj.getDay() === 0 || cell.dateObj.getDay() === 6;
+           const blockedInfo = getBlockedInfo(cell.dateKey);
+           const isBlocked = Boolean(blockedInfo);
+           const isSeasonal = isBlocked && blockedInfo?.type === 'seasonal';
+ 
+           let buttonClasses = 'text-slate-200 hover:bg-slate-800 hover:text-cyan-300 cursor-pointer';
+ 
+           if (!cell.isCurrentMonth) {
+             buttonClasses = 'opacity-25 text-slate-500 cursor-not-allowed pointer-events-none';
+           } else if (isPast) {
+             buttonClasses = 'opacity-35 text-slate-400 cursor-not-allowed';
+           } else if (isBlocked) {
+             if (isSeasonal) {
+               // Seasonal/Maintenance styling: Amber/Gray tone
+               buttonClasses = 'bg-amber-950/15 text-amber-500/40 cursor-not-allowed border border-amber-950/25 font-medium';
+             } else {
+               // Reservation/Event styling: Rose tone with line-through
+               buttonClasses = 'bg-rose-950/10 text-rose-500/40 line-through cursor-not-allowed border border-rose-950/30 font-medium';
+             }
+           } else if (isSelected) {
+             // High visibility for the selected date
+             buttonClasses = 'bg-cyan-500 text-slate-950 font-black shadow-md shadow-cyan-500/30 scale-105 cursor-pointer';
+           } else if (isWeekend) {
+             buttonClasses = 'text-white bg-slate-800/40 hover:bg-slate-800 hover:text-cyan-300 font-semibold cursor-pointer';
+           }
+ 
+           return (
+             <button
+               key={cell.dateKey}
+               type="button"
+               disabled={!cell.isCurrentMonth || isPast || isBlocked}
+               onClick={() => handleDayClick(cell.dateKey, isPast)}
+               className={`h-9 sm:h-10 w-full rounded-xl text-xs sm:text-sm flex items-center justify-center relative transition-all duration-150 active:scale-90 ${buttonClasses} ${
+                 isToday && !isSelected ? 'border border-cyan-500/60 font-bold' : ''
+               }`}
+             >
+               <span>{cell.dayNumber}</span>
+               {isBlocked && cell.isCurrentMonth && (
+                 <span className={`absolute bottom-1 w-1 h-1 rounded-full ${isSeasonal ? 'bg-amber-500/60' : 'bg-rose-500/60'}`} />
+               )}
+             </button>
+           );
+         })}
+       </div>
 
-          const isPast = dateObjNoTime < today;
-          const isToday = dateObjNoTime.getTime() === today.getTime();
-          const isSelected = selectedDate === cell.dateKey;
-          const isWeekend = cell.dateObj.getDay() === 0 || cell.dateObj.getDay() === 6;
-
-          let buttonClasses = 'text-slate-200 hover:bg-slate-800 hover:text-cyan-300 cursor-pointer';
-
-          if (!cell.isCurrentMonth) {
-            buttonClasses = 'opacity-25 text-slate-500 cursor-not-allowed pointer-events-none';
-          } else if (isPast) {
-            buttonClasses = 'opacity-35 text-slate-400 cursor-not-allowed';
-          } else if (isSelected) {
-            // High visibility for the selected date
-            buttonClasses = 'bg-cyan-500 text-slate-950 font-black shadow-md shadow-cyan-500/30 scale-105 cursor-pointer';
-          } else if (isWeekend) {
-            buttonClasses = 'text-white bg-slate-800/40 hover:bg-slate-800 hover:text-cyan-300 font-semibold cursor-pointer';
-          }
-
-          return (
-            <button
-              key={cell.dateKey}
-              type="button"
-              disabled={!cell.isCurrentMonth || isPast}
-              onClick={() => handleDayClick(cell.dateKey, isPast)}
-              className={`h-9 sm:h-10 w-full rounded-xl text-xs sm:text-sm flex items-center justify-center relative transition-all duration-150 active:scale-90 ${buttonClasses} ${
-                isToday && !isSelected ? 'border border-cyan-500/60 font-bold' : ''
-              }`}
-            >
-              <span>{cell.dayNumber}</span>
-            </button>
-          );
-        })}
-      </div>
+       {/* Symbology Legend */}
+       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 mt-3 text-[10px] text-slate-400 border-t border-slate-900 pt-2.5">
+         <span className="flex items-center gap-1.5">
+           <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+           <span>Seleccionado</span>
+         </span>
+         <span className="flex items-center gap-1.5">
+           <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+           <span>Reservado (Evento)</span>
+         </span>
+         <span className="flex items-center gap-1.5">
+           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+           <span>Cierre Estacional / Temporada</span>
+         </span>
+       </div>
 
       {/* Availability Status Box: Shows when a date is selected by the visitor */}
       <div className="mt-4 pt-3 border-t border-slate-800">

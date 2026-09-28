@@ -34,6 +34,13 @@ import {
   toggleDateStatus,
   verifyAdminPin,
   DEFAULT_ADMIN_PIN,
+  MonthPricing,
+  getMonthPricing,
+  saveMonthPricing,
+  addBlockedDateRange,
+  addBlockedMonth,
+  isWeekendDay,
+  calculateDatePrice,
 } from '../utils/calendarStorage';
 import { VENUE_INFO } from '../data/venueData';
 import { Logo } from './Logo';
@@ -88,6 +95,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
   const [newReason, setNewReason] = useState('');
+  const [newType, setNewType] = useState<'reservation' | 'seasonal'>('reservation');
 
   // Search & filter in reservations list
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,6 +110,46 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   const [activeClientName, setActiveClientName] = useState('');
   const [activeClientPhone, setActiveClientPhone] = useState('');
   const [activeDateReason, setActiveDateReason] = useState('');
+  const [activeDateType, setActiveDateType] = useState<'reservation' | 'seasonal'>('reservation');
+
+  // New Block modes: 'single' | 'range' | 'month'
+  const [blockMode, setBlockMode] = useState<'single' | 'range' | 'month'>('single');
+
+  // Range block state
+  const [rangeStartDate, setRangeStartDate] = useState('');
+  const [rangeEndDate, setRangeEndDate] = useState('');
+  const [rangeReason, setRangeReason] = useState('');
+  const [rangeClientName, setRangeClientName] = useState('');
+  const [rangeClientPhone, setRangeClientPhone] = useState('');
+  const [rangeType, setRangeType] = useState<'reservation' | 'seasonal'>('reservation');
+
+  // Month block state
+  const [monthBlockIndex, setMonthBlockIndex] = useState<number>(today.getMonth());
+  const [monthBlockYear, setMonthBlockYear] = useState<number>(today.getFullYear());
+  const [monthBlockReason, setMonthBlockReason] = useState('');
+  const [monthBlockClientName, setMonthBlockClientName] = useState('');
+  const [monthBlockClientPhone, setMonthBlockClientPhone] = useState('');
+  const [monthType, setMonthType] = useState<'reservation' | 'seasonal'>('seasonal');
+
+  // Pricing configuration state
+  const [pricingList, setPricingList] = useState<MonthPricing[]>(() => getMonthPricing());
+  const [pricingEditTab, setPricingEditTab] = useState(false); // Toggle to show pricing manager
+
+  const getWhatsAppConfirmationLink = (dateStr: string, name?: string, phone?: string) => {
+    if (!phone) return null;
+    const cleanNumber = phone.replace(/[^0-9]/g, '');
+    if (cleanNumber.length < 8) return null;
+    const formattedDate = formatToDDMMYYYY(dateStr);
+    const text = `¡Hola ${name || 'cliente'}! Te escribimos de *${VENUE_INFO.name}* 🌳✨
+
+Queremos confirmarte que tu reserva para el día *${formattedDate}* ya se encuentra registrada y asegurada en nuestro sistema.
+
+📍 *Ubicación:* ${VENUE_INFO.address}
+⏰ *Recordatorio de Ingreso:* Te esperamos en el horario correspondiente de tu turno acordado.
+
+Si tenés alguna consulta adicional o querés coordinar algún detalle, no dudes en escribirnos por este medio. ¡Muchas gracias por elegirnos para tu evento! 🙌😊`;
+    return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`;
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -151,10 +199,12 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
       setActiveClientName(existing.clientName || '');
       setActiveClientPhone(existing.clientPhone || '');
       setActiveDateReason(existing.reason || '');
+      setActiveDateType(existing.type || 'reservation');
     } else {
       setActiveClientName('');
       setActiveClientPhone('');
       setActiveDateReason('');
+      setActiveDateType('reservation');
     }
   };
 
@@ -164,7 +214,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         date: dateKey,
         clientName: activeClientName,
         clientPhone: activeClientPhone,
-        reason: activeDateReason || 'Reserva confirmada',
+        reason: activeDateReason || (activeDateType === 'seasonal' ? 'Cerrado por temporada / mantenimiento' : 'Reserva confirmada'),
+        type: activeDateType,
       });
       showToast(`Fecha ${dateKey} guardada exitosamente.`);
     } else {
@@ -176,6 +227,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
     setActiveClientName('');
     setActiveClientPhone('');
     setActiveDateReason('');
+    setActiveDateType('reservation');
   };
 
   const handleManualAdd = (e: React.FormEvent) => {
@@ -185,7 +237,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
       date: newDate,
       clientName: newClientName,
       clientPhone: newClientPhone,
-      reason: newReason || 'Reserva confirmada',
+      reason: newReason || (newType === 'seasonal' ? 'Cierre estacional / temporada' : 'Reserva confirmada'),
+      type: newType,
     });
     onRefreshDates();
     showToast(`Fecha ${newDate} guardada exitosamente.`);
@@ -193,6 +246,52 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
     setNewClientName('');
     setNewClientPhone('');
     setNewReason('');
+    setNewType('reservation');
+  };
+
+  const handleBlockRange = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rangeStartDate || !rangeEndDate) return;
+    addBlockedDateRange(
+      rangeStartDate,
+      rangeEndDate,
+      rangeReason || (rangeType === 'seasonal' ? 'Cierre estacional administrativo' : 'Bloqueo administrativo por reserva'),
+      rangeClientName,
+      rangeClientPhone,
+      rangeType
+    );
+    onRefreshDates();
+    showToast(`Rango del ${formatToDDMMYYYY(rangeStartDate)} al ${formatToDDMMYYYY(rangeEndDate)} bloqueado.`);
+    setRangeStartDate('');
+    setRangeEndDate('');
+    setRangeReason('');
+    setRangeClientName('');
+    setRangeClientPhone('');
+    setRangeType('reservation');
+  };
+
+  const handleBlockMonth = (e: React.FormEvent) => {
+    e.preventDefault();
+    addBlockedMonth(
+      monthBlockYear,
+      monthBlockIndex,
+      monthBlockReason || (monthType === 'seasonal' ? 'Cerrado por temporada' : 'Mes completo reservado'),
+      monthBlockClientName,
+      monthBlockClientPhone,
+      monthType
+    );
+    onRefreshDates();
+    showToast(`Mes de ${MONTH_NAMES[monthBlockIndex]} ${monthBlockYear} bloqueado.`);
+    setMonthBlockReason('');
+    setMonthBlockClientName('');
+    setMonthBlockClientPhone('');
+    setMonthType('seasonal');
+  };
+
+  const handleSavePricing = (newPricing: MonthPricing[]) => {
+    saveMonthPricing(newPricing);
+    setPricingList(newPricing);
+    showToast('¡Tarifas mensuales guardadas con éxito!');
   };
 
   const handleRemoveDate = (dateStr: string) => {
@@ -263,6 +362,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
   const filteredReservations = useMemo(() => {
     const todayStr = formatDateKey(today);
     return blockedDates
+      .filter((item) => item.type !== 'seasonal') // Omitir bloqueos de administración / temporada
       .filter((item) => {
         if (filterTab === 'upcoming') return item.date >= todayStr;
         if (filterTab === 'past') return item.date < todayStr;
@@ -281,10 +381,11 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [blockedDates, filterTab, searchQuery]);
 
-  // Statistics
+  // Statistics (excluding seasonal blocks which are admin blocks)
   const todayKey = formatDateKey(today);
-  const upcomingCount = blockedDates.filter((b) => b.date >= todayKey).length;
+  const upcomingCount = blockedDates.filter((b) => b.type !== 'seasonal' && b.date >= todayKey).length;
   const weekendReservations = blockedDates.filter((b) => {
+    if (b.type === 'seasonal') return false;
     const [y, m, d] = b.date.split('-').map(Number);
     const day = new Date(y, m - 1, d).getDay();
     return (day === 0 || day === 6) && b.date >= todayKey;
@@ -292,11 +393,11 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
 
   const handleCopySummary = () => {
     const sorted = [...blockedDates]
-      .filter((b) => b.date >= todayKey)
+      .filter((b) => b.type !== 'seasonal' && b.date >= todayKey)
       .sort((a, b) => a.date.localeCompare(b.date));
 
     if (sorted.length === 0) {
-      navigator.clipboard.writeText('No hay fechas ocupadas próximas en Espacio CHAPA.');
+      navigator.clipboard.writeText('No hay reservas activas próximas de clientes.');
     } else {
       const lines = sorted.map((b) => {
         let line = `• ${formatToDDMMYYYY(b.date)}`;
@@ -305,7 +406,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
         if (b.reason) line += ` - ${b.reason}`;
         return line;
       }).join('\n');
-      navigator.clipboard.writeText(`*Fechas ocupadas - Espacio CHAPA:*\n${lines}`);
+      navigator.clipboard.writeText(`*Reservas Confirmadas - ${VENUE_INFO.name}:*\n${lines}`);
     }
     setCopiedSummary(true);
     showToast('¡Resumen de reservas copiado al portapapeles!');
@@ -584,6 +685,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                 const isToday = dateObjNoTime.getTime() === today.getTime();
                 const blockedItem = getBlockedItem(cell.dateKey);
                 const isBlocked = Boolean(blockedItem);
+                const isSeasonal = blockedItem?.type === 'seasonal';
                 const isWeekend = cell.dateObj.getDay() === 0 || cell.dateObj.getDay() === 6;
 
                 let cellBg = 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-cyan-500/70 hover:bg-slate-800/60';
@@ -591,7 +693,11 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                 if (!cell.isCurrentMonth) {
                   cellBg = 'opacity-20 border-transparent bg-slate-950/20 text-slate-600 pointer-events-none';
                 } else if (isBlocked) {
-                  cellBg = 'bg-rose-950/50 border-rose-800/70 text-rose-200 hover:bg-rose-900/50 hover:border-rose-600';
+                  if (isSeasonal) {
+                    cellBg = 'bg-slate-800/80 border-slate-700 text-slate-400 hover:bg-slate-750/90 hover:border-slate-500';
+                  } else {
+                    cellBg = 'bg-rose-950/50 border-rose-800/70 text-rose-200 hover:bg-rose-900/50 hover:border-rose-600';
+                  }
                 } else if (isWeekend) {
                   cellBg = 'bg-slate-900 border-slate-800/80 text-white hover:border-cyan-500/70';
                 }
@@ -618,11 +724,13 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                         <span
                           className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
                             isBlocked
-                              ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                              ? isSeasonal
+                                ? 'bg-slate-850 text-slate-400 border border-slate-750'
+                                : 'bg-rose-950 text-rose-300 border border-rose-800'
                               : 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
                           }`}
                         >
-                          {isBlocked ? 'Ocupado' : 'Libre'}
+                          {isBlocked ? (isSeasonal ? 'Mantenim.' : 'Ocupado') : 'Libre'}
                         </span>
                       )}
                     </div>
@@ -630,8 +738,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                     {cell.isCurrentMonth && (
                       <div className="text-[10px] truncate w-full mt-1">
                         {isBlocked ? (
-                          <span className="text-rose-300/90 font-medium truncate block">
-                            {blockedItem?.reason || 'Reservado'}
+                          <span className={`font-medium truncate block ${isSeasonal ? 'text-slate-400/90' : 'text-rose-300/90'}`}>
+                            {blockedItem?.reason || (isSeasonal ? 'No disponible' : 'Reservado')}
                           </span>
                         ) : (
                           <span className="text-slate-400 group-hover:text-cyan-400 transition-colors">
@@ -647,96 +755,502 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
 
             {/* Legend */}
             <div className="mt-6 pt-5 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   <span className="text-slate-300">Disponible</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                  <span className="text-slate-300">Reservada / Bloqueada</span>
+                  <span className="text-slate-300">Reserva (Cliente)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
+                  <span className="text-slate-300">Temporada / Receso</span>
                 </div>
               </div>
               <span className="text-[11px] text-slate-400">
-                💡 Al hacer clic en un día podés agregar nota o liberarlo al instante.
+                💡 Al hacer clic en un día podés configurar detalles o liberarlo al instante.
               </span>
             </div>
           </div>
 
           {/* Right Column: Add Date + Full Reservation List (5 Cols) */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Form to Block Specific Date with full fields */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
-              <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Plus className="w-4 h-4 text-cyan-400" />
-                <span>Bloquear y Registrar Reserva</span>
-              </h4>
-
-              <form onSubmit={handleManualAdd} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <CalendarIcon className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Fecha de reserva *</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white outline-none focus:border-cyan-400 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Nombre y Apellido de quien reserva *</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej: Juan Pérez / Martina Silva"
-                    value={newClientName}
-                    onChange={(e) => setNewClientName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Teléfono de contacto</span>
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="Ej: +54 9 11 1234-5678"
-                    value={newClientPhone}
-                    onChange={(e) => setNewClientPhone(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Motivo o tipo de evento (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: Cumpleaños familiar, Seña confirmada..."
-                    value={newReason}
-                    onChange={(e) => setNewReason(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
-                  />
-                </div>
-
+            {/* Form to Block Specific Date / Pricing Config */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
+              {/* Tabs selector: Reservations vs Pricing */}
+              <div className="flex border-b border-slate-800 p-0.5 bg-slate-950 rounded-2xl">
                 <button
-                  type="submit"
-                  className="w-full py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+                  type="button"
+                  onClick={() => setPricingEditTab(false)}
+                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    !pricingEditTab
+                      ? 'bg-slate-900 text-cyan-400 shadow-sm border border-slate-800'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Guardar y Bloquear Fecha</span>
+                  Bloquear Fechas
                 </button>
-              </form>
+                <button
+                  type="button"
+                  onClick={() => setPricingEditTab(true)}
+                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    pricingEditTab
+                      ? 'bg-slate-900 text-cyan-400 shadow-sm border border-slate-800'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Configurar Tarifas
+                </button>
+              </div>
+
+              {!pricingEditTab ? (
+                // BLOCK RESERVATIONS WORKSPACE
+                <div className="space-y-4">
+                  {/* Secondary tabs for block modes: Single, Range, Month */}
+                  <div className="flex gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800/80 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => setBlockMode('single')}
+                      className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                        blockMode === 'single'
+                          ? 'bg-cyan-500 text-slate-950'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Día Único
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBlockMode('range')}
+                      className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                        blockMode === 'range'
+                          ? 'bg-cyan-500 text-slate-950'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Rango / Lapso
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBlockMode('month')}
+                      className={`flex-1 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                        blockMode === 'month'
+                          ? 'bg-cyan-500 text-slate-950'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Mes Completo
+                    </button>
+                  </div>
+
+                  {blockMode === 'single' && (
+                    <form onSubmit={handleManualAdd} className="space-y-3.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <CalendarIcon className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Fecha de reserva *</span>
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={newDate}
+                          onChange={(e) => setNewDate(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                          Tipo de bloqueo *
+                        </label>
+                        <div className="flex gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setNewType('reservation')}
+                            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                              newType === 'reservation'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            Reserva (Cliente)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNewType('seasonal')}
+                            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                              newType === 'seasonal'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            Temporada / Receso
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Nombre del Cliente *</span>
+                        </label>
+                        <input
+                          type="text"
+                          required={newType === 'reservation'}
+                          placeholder={newType === 'seasonal' ? "Ej: Receso Invernal (Opcional)" : "Ej: Juan Pérez"}
+                          value={newClientName}
+                          onChange={(e) => setNewClientName(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Teléfono de contacto</span>
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="Ej: +54 9 11 1234-5678"
+                          value={newClientPhone}
+                          onChange={(e) => setNewClientPhone(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                          Motivo o detalle
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej: Cumpleaños familiar, Seña abonada..."
+                          value={newReason}
+                          onChange={(e) => setNewReason(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Guardar y Bloquear Día</span>
+                      </button>
+                    </form>
+                  )}
+
+                  {blockMode === 'range' && (
+                    <form onSubmit={handleBlockRange} className="space-y-3.5">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                            Desde *
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={rangeStartDate}
+                            onChange={(e) => setRangeStartDate(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-cyan-400 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                            Hasta *
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={rangeEndDate}
+                            onChange={(e) => setRangeEndDate(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-cyan-400 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                          Tipo de bloqueo *
+                        </label>
+                        <div className="flex gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setRangeType('reservation')}
+                            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                              rangeType === 'reservation'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            Reserva (Cliente)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRangeType('seasonal')}
+                            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                              rangeType === 'seasonal'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            Temporada / Receso
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Nombre / Administración (Opcional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={rangeType === 'seasonal' ? "Ej: Receso Invernal, Mantenimiento" : "Ej: Juan Pérez"}
+                          value={rangeClientName}
+                          onChange={(e) => setRangeClientName(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Teléfono (Opcional)</span>
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="Ej: +54 9 11 1234-5678"
+                          value={rangeClientPhone}
+                          onChange={(e) => setRangeClientPhone(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                          Motivo del Bloqueo *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej: Cerrado por mantenimiento de pileta"
+                          value={rangeReason}
+                          onChange={(e) => setRangeReason(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+                      >
+                        <CalendarX className="w-4 h-4" />
+                        <span>Bloquear Rango de Fechas</span>
+                      </button>
+                    </form>
+                  )}
+
+                  {blockMode === 'month' && (
+                    <form onSubmit={handleBlockMonth} className="space-y-3.5">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                            Mes *
+                          </label>
+                          <select
+                            value={monthBlockIndex}
+                            onChange={(e) => setMonthBlockIndex(Number(e.target.value))}
+                            className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400 transition-colors cursor-pointer"
+                          >
+                            {MONTH_NAMES.map((name, idx) => (
+                              <option key={name} value={idx}>{name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                            Año *
+                          </label>
+                          <input
+                            type="number"
+                            required
+                            min="2025"
+                            max="2035"
+                            value={monthBlockYear}
+                            onChange={(e) => setMonthBlockYear(Number(e.target.value))}
+                            className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-cyan-400 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                          Tipo de bloqueo *
+                        </label>
+                        <div className="flex gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                          <button
+                            type="button"
+                            onClick={() => setMonthType('reservation')}
+                            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                              monthType === 'reservation'
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            Reserva (Cliente)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMonthType('seasonal')}
+                            className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                              monthType === 'seasonal'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            Temporada / Receso
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Nombre / Admin (Opcional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={monthType === 'seasonal' ? "Ej: Receso Invernal, Mantenimiento" : "Ej: Cliente Corporativo"}
+                          value={monthBlockClientName}
+                          onChange={(e) => setMonthBlockClientName(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Teléfono (Opcional)</span>
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="Ej: +54 9 11 ..."
+                          value={monthBlockClientPhone}
+                          onChange={(e) => setMonthBlockClientPhone(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+                          Motivo del Cierre Completo *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej: Cerrado por receso invernal / reformas"
+                          value={monthBlockReason}
+                          onChange={(e) => setMonthBlockReason(e.target.value)}
+                          className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+                      >
+                        <CalendarX className="w-4 h-4" />
+                        <span>Bloquear Mes Completo</span>
+                      </button>
+                    </form>
+                  )}
+                </div>
+              ) : (
+                // CONFIG PRICING LIST WORKSPACE
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-extrabold text-white uppercase tracking-wider">
+                        Cuadro Tarifario Mensual
+                      </h5>
+                      <p className="text-[10px] text-slate-400">
+                        Precios para alquiler diurno de Quinta (Lunes a Jueves vs Viernes a Domingo)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Scrollable list of 12 months with price configuration */}
+                  <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1 custom-scrollbar">
+                    {pricingList.map((pricing, index) => (
+                      <div
+                        key={pricing.monthIndex}
+                        className="p-3 rounded-2xl bg-slate-950 border border-slate-800/80 hover:border-slate-700/60 transition-colors space-y-2"
+                      >
+                        <span className="text-xs font-extrabold text-cyan-400 block border-b border-slate-800/60 pb-1">
+                          {MONTH_NAMES[pricing.monthIndex]}
+                        </span>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-semibold block mb-0.5">
+                              Lunes a Jueves (Días de semana)
+                            </span>
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">$</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="5000"
+                                value={pricing.weekdayPrice}
+                                onChange={(e) => {
+                                  const updated = [...pricingList];
+                                  updated[index].weekdayPrice = Number(e.target.value);
+                                  setPricingList(updated);
+                                }}
+                                className="w-full pl-6 pr-2 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono font-bold text-white focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-semibold block mb-0.5">
+                              Viernes a Domingo (Findes)
+                            </span>
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">$</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="5000"
+                                value={pricing.weekendPrice}
+                                onChange={(e) => {
+                                  const updated = [...pricingList];
+                                  updated[index].weekendPrice = Number(e.target.value);
+                                  setPricingList(updated);
+                                }}
+                                className="w-full pl-6 pr-2 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono font-bold text-white focus:outline-none focus:border-cyan-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSavePricing(pricingList)}
+                    className="w-full py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Guardar Cambios de Tarifas</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* List of Reservations with Search & Filter */}
@@ -829,22 +1343,37 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
 
                             {/* Client Phone & WhatsApp shortcut */}
                             {item.clientPhone && (
-                              <div className="flex items-center gap-2 pt-0.5">
+                              <div className="flex flex-wrap items-center gap-1.5 pt-1">
                                 <span className="flex items-center gap-1 text-[11px] text-slate-300">
                                   <Phone className="w-3 h-3 text-emerald-400 shrink-0" />
                                   <span>{item.clientPhone}</span>
                                 </span>
-                                {waLink && (
-                                  <a
-                                    href={waLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-[10px] font-semibold transition-colors"
-                                  >
-                                    <MessageCircle className="w-2.5 h-2.5" />
-                                    <span>WhatsApp</span>
-                                  </a>
-                                )}
+                                <div className="flex items-center gap-1">
+                                  {waLink && (
+                                    <a
+                                      href={waLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[10px] font-semibold transition-colors"
+                                      title="Abrir chat de WhatsApp"
+                                    >
+                                      <MessageCircle className="w-2.5 h-2.5" />
+                                      <span>Chat</span>
+                                    </a>
+                                  )}
+                                  {getWhatsAppConfirmationLink(item.date, item.clientName, item.clientPhone) && (
+                                    <a
+                                      href={getWhatsAppConfirmationLink(item.date, item.clientName, item.clientPhone)!}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 border border-emerald-800/80 text-emerald-300 text-[10px] font-bold transition-all"
+                                      title="Enviar mensaje pre-armado de confirmación por WhatsApp"
+                                    >
+                                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                                      <span>Confirmar</span>
+                                    </a>
+                                  )}
+                                </div>
                               </div>
                             )}
 
@@ -918,13 +1447,43 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
 
             <div className="space-y-3.5">
               <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Tipo de Bloqueo *
+                </label>
+                <div className="flex gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setActiveDateType('reservation')}
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                      activeDateType === 'reservation'
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    Reserva (Cliente)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveDateType('seasonal')}
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                      activeDateType === 'seasonal'
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    Temporada / Receso
+                  </button>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Nombre y Apellido de quien reserva</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej: Laura Gómez / Pedro Rossi"
+                  placeholder={activeDateType === 'seasonal' ? "Ej: Receso Invernal (Opcional)" : "Ej: Laura Gómez"}
                   value={activeClientName}
                   onChange={(e) => setActiveClientName(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
@@ -936,7 +1495,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                   <Phone className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Teléfono de contacto</span>
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="tel"
                     placeholder="Ej: +54 9 11 1234-5678"
@@ -944,17 +1503,32 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({
                     onChange={(e) => setActiveClientPhone(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition-colors"
                   />
-                  {getWhatsAppLink(activeClientPhone) && (
-                    <a
-                      href={getWhatsAppLink(activeClientPhone)!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shrink-0 transition-colors"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      <span>WhatsApp</span>
-                    </a>
-                  )}
+                  <div className="flex gap-2 shrink-0">
+                    {getWhatsAppLink(activeClientPhone) && (
+                      <a
+                        href={getWhatsAppLink(activeClientPhone)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-xs flex items-center gap-1 transition-colors"
+                        title="Chat directo de WhatsApp"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>Chat</span>
+                      </a>
+                    )}
+                    {getWhatsAppConfirmationLink(activeDateModal, activeClientName, activeClientPhone) && (
+                      <a
+                        href={getWhatsAppConfirmationLink(activeDateModal, activeClientName, activeClientPhone)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-1 shrink-0 transition-colors"
+                        title="Enviar mensaje pre-armado de confirmación por WhatsApp"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Confirmar</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
 

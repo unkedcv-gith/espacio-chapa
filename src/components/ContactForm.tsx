@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { VENUE_INFO } from '../data/venueData';
 import { ContactFormData } from '../types';
-import { BlockedDate, formatToDDMMYYYY } from '../utils/calendarStorage';
+import { BlockedDate, formatToDDMMYYYY, getMonthPricing, calculateDatePrice, isWeekendDay } from '../utils/calendarStorage';
 import { BookingCalendar } from './BookingCalendar';
 import {
   Send,
@@ -32,7 +32,6 @@ export const ContactForm: React.FC<ContactFormProps> = ({
     phone: '',
     email: '',
     eventDate: selectedDate || '',
-    eventType: 'Cumpleaños / Fiesta',
     guestCount: 50,
     timeSlot: 'day',
     notes: '',
@@ -46,9 +45,14 @@ export const ContactForm: React.FC<ContactFormProps> = ({
 
   const [submitted, setSubmitted] = useState(false);
   const [sendingToWhatsapp, setSendingToWhatsapp] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Check if selected date is blocked
   const selectedBlocked = blockedDates.find((b) => b.date === formData.eventDate);
+
+  const currentPricing = getMonthPricing();
+  const datePrice = formData.eventDate ? calculateDatePrice(formData.eventDate, currentPricing) : 0;
+  const isWeekend = formData.eventDate ? isWeekendDay(formData.eventDate) : false;
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -67,26 +71,39 @@ export const ContactForm: React.FC<ContactFormProps> = ({
 
   const buildWhatsAppMessage = () => {
     const timeSlotLabel =
-      formData.timeSlot === 'day'
-        ? 'Turno Día (11 a 19 hs)'
-        : formData.timeSlot === 'night'
-        ? 'Turno Noche (20 a 05 hs)'
-        : 'Jornada Completa (11 a 05 hs)';
+      formData.timeSlot === 'full'
+        ? 'Turno Full (10 a 00 hs)'
+        : 'Turno Día (11 a 19 hs)';
 
     const formattedDate = formData.eventDate ? formatToDDMMYYYY(formData.eventDate) : 'No especificado';
+    const priceText = datePrice > 0 ? `$${datePrice.toLocaleString('es-AR')}` : 'A consultar';
 
     return `¡Hola ${VENUE_INFO.name}! Quiero consultar disponibilidad para mi evento:
 👤 *Nombre:* ${formData.fullName.trim() || 'No especificado'}
 📞 *Teléfono:* ${formData.phone.trim() || 'No especificado'}
 📧 *Email:* ${formData.email.trim() || 'No especificado'}
 📅 *Fecha estimada:* ${formattedDate}
-🎉 *Tipo de Evento:* ${formData.eventType}
 👥 *Invitados estimados:* ${formData.guestCount} personas
 ⏰ *Turno:* ${timeSlotLabel}
+💰 *Presupuesto de referencia:* ${priceText}
 📝 *Consultas / Notas:* ${formData.notes.trim() || 'Ninguna'}`;
   };
 
   const handleSendToWhatsAppDirect = () => {
+    if (!formData.fullName.trim()) {
+      setValidationError('Por favor, ingresá tu Nombre y Apellido.');
+      return;
+    }
+    if (!formData.phone.trim()) {
+      setValidationError('Por favor, ingresá tu número de Teléfono.');
+      return;
+    }
+    if (!formData.eventDate) {
+      setValidationError('Por favor, seleccioná una fecha para tu evento.');
+      return;
+    }
+
+    setValidationError(null);
     setSendingToWhatsapp(true);
     const message = buildWhatsAppMessage();
     window.open(`https://wa.me/${VENUE_INFO.whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
@@ -107,7 +124,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             <span>Disponibilidad & Contacto</span>
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3">
-            Consultá tu fecha y asegurá tu festejo
+            Consultá la fecha y asegurá tu festejo
           </h2>
           <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
             Tocá el día de tu evento en el almanaque para verificar disponibilidad y envianos tu consulta directa por formulario o WhatsApp.
@@ -286,6 +303,26 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                   </div>
                 </div>
 
+                {/* Dynamic Price Display */}
+                {formData.eventDate && !selectedBlocked && datePrice > 0 && (
+                  <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div>
+                      <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
+                        Presupuesto del Alquiler Diurno
+                      </span>
+                      <span className="text-xs text-slate-300">
+                        {isWeekend ? 'Tarifa Fin de semana (Viernes a Domingo)' : 'Tarifa Promocional Día de semana (Lunes a Jueves)'}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xl sm:text-2xl font-black text-cyan-400 font-mono">
+                        ${datePrice.toLocaleString('es-AR')}
+                      </span>
+                      <span className="text-[9px] text-slate-400 block">Sujeto a variación</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Notice if the selected date is blocked */}
                 {selectedBlocked && (
                   <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/60 flex items-start gap-2 text-xs text-rose-200 animate-in fade-in">
@@ -296,36 +333,6 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                     </div>
                   </div>
                 )}
-
-                {/* Event Type & Quick Pills */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                    Tipo de Evento
-                  </label>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {[
-                      'Cumpleaños / Fiesta',
-                      'Fiesta de 15',
-                      'Casamiento / Boda',
-                      'Día de Pileta / Pool Day',
-                      'Corporativo / Empresa',
-                      'Bautismo / Comunión',
-                    ].map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setFormData((prev) => ({ ...prev, eventType: type }))}
-                        className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
-                          formData.eventType === type
-                            ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-bold shadow-sm'
-                            : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 {/* Guests & Turno Selection */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -382,8 +389,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                       className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-400 transition-colors cursor-pointer"
                     >
                       <option value="day">☀️ Turno Día (11 a 19 hs)</option>
-                      <option value="night">🌙 Turno Noche (20 a 05 hs)</option>
-                      <option value="full">🌟 Jornada Full (11 a 05 hs)</option>
+                      <option value="full">🌟 Turno Full (10 a 00 hs)</option>
                     </select>
                   </div>
                 </div>
@@ -402,22 +408,21 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                   />
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                  <button
-                    type="submit"
-                    className="w-full sm:flex-1 py-3 px-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-sm rounded-xl transition-all shadow-lg shadow-cyan-950 flex items-center justify-center gap-2 active:scale-98"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>Enviar Formulario</span>
-                  </button>
+                {validationError && (
+                  <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/60 flex items-center gap-2 text-xs text-rose-300 animate-in fade-in">
+                    <AlertCircle className="w-4.5 h-4.5 text-rose-400 shrink-0" />
+                    <span>{validationError}</span>
+                  </div>
+                )}
 
+                <div className="pt-2">
                   <button
                     type="button"
-                    onClick={handleSendToWhatsAppDirect}
-                    className="w-full sm:w-auto py-3 px-5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-98"
+                    onClick={() => handleSendToWhatsAppDirect()}
+                    className="w-full py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-sm rounded-xl transition-all shadow-md hover:shadow-emerald-950/20 flex items-center justify-center gap-2.5 active:scale-98 cursor-pointer"
                   >
-                    <MessageCircle className="w-4 h-4 fill-current" />
-                    <span>Consultar por WhatsApp</span>
+                    <MessageCircle className="w-5 h-5 fill-current" />
+                    <span>Consultar disponibilidad por WhatsApp</span>
                   </button>
                 </div>
               </form>

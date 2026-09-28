@@ -13,7 +13,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenAdminModal })
   return (
     <footer className="bg-slate-950 border-t border-slate-900 pt-16 pb-12 text-slate-400 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           {/* Brand Info */}
           <div className="lg:col-span-2 space-y-4">
             <Logo size="md" />
@@ -58,26 +58,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, onOpenAdminModal })
             </h4>
             <ul className="space-y-2.5">
               <li><a href="#inicio" className="hover:text-cyan-400 transition-colors">Inicio</a></li>
-              <li><a href="#diccionario" className="hover:text-cyan-400 transition-colors">Diccionario CHAPA</a></li>
+              <li><a href="#identidad" className="hover:text-cyan-400 transition-colors">Somos Espacio Chapa</a></li>
               <li><a href="#instalaciones" className="hover:text-cyan-400 transition-colors">Instalaciones & Pileta</a></li>
               <li><a href="#opiniones" className="hover:text-cyan-400 transition-colors">Opiniones de Clientes</a></li>
               <li><a href="#contacto" className="hover:text-cyan-400 transition-colors">Disponibilidad & Contacto</a></li>
               <li><a href="#faqs" className="hover:text-cyan-400 transition-colors">Preguntas Frecuentes</a></li>
               <li><a href="#ubicacion" className="hover:text-cyan-400 transition-colors">Ubicación & Accesos</a></li>
-            </ul>
-          </div>
-
-          {/* Events */}
-          <div>
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4">
-              Servicios
-            </h4>
-            <ul className="space-y-2.5">
-              <li><a href="#eventos" className="hover:text-cyan-400 transition-colors">Fiestas de 15 & Cumpleaños</a></li>
-              <li><a href="#eventos" className="hover:text-cyan-400 transition-colors">Casamientos & Bodas</a></li>
-              <li><a href="#eventos" className="hover:text-cyan-400 transition-colors">Días de Campo & Pool Day</a></li>
-              <li><a href="#eventos" className="hover:text-cyan-400 transition-colors">Eventos Corporativos</a></li>
-              <li><a href="#faqs" className="hover:text-cyan-400 transition-colors">Preguntas Frecuentes</a></li>
             </ul>
           </div>
 

@@ -53,7 +53,6 @@ export interface ContactFormData {
   phone: string;
   email: string;
   eventDate: string;
-  eventType: string;
   guestCount: number;
   timeSlot: 'day' | 'night' | 'full';
   notes: string;

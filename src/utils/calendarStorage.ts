@@ -4,6 +4,7 @@ export interface BlockedDate {
   clientPhone?: string; // Teléfono de contacto
   reason?: string; // Motivo o detalles del evento
   createdAt?: string;
+  type?: 'reservation' | 'seasonal'; // Para diferenciar reserva de temporada/mantenimiento
 }
 
 const STORAGE_KEY = 'chapa_blocked_dates_v1';
@@ -102,13 +103,15 @@ export interface BlockDateParams {
   clientName?: string;
   clientPhone?: string;
   reason?: string;
+  type?: 'reservation' | 'seasonal';
 }
 
 export const addBlockedDate = (
   dateStrOrParams: string | BlockDateParams,
   reason?: string,
   clientName?: string,
-  clientPhone?: string
+  clientPhone?: string,
+  type?: 'reservation' | 'seasonal'
 ): BlockedDate[] => {
   const current = getStoredBlockedDates();
   
@@ -116,12 +119,14 @@ export const addBlockedDate = (
   let targetReason = reason || 'Fecha bloqueada por administración';
   let targetName = clientName || '';
   let targetPhone = clientPhone || '';
+  let targetType: 'reservation' | 'seasonal' = type || 'reservation';
 
   if (typeof dateStrOrParams === 'object') {
     targetDate = dateStrOrParams.date;
     targetReason = dateStrOrParams.reason || targetReason;
     targetName = dateStrOrParams.clientName || targetName;
     targetPhone = dateStrOrParams.clientPhone || targetPhone;
+    targetType = dateStrOrParams.type || targetType;
   } else {
     targetDate = dateStrOrParams;
   }
@@ -132,6 +137,7 @@ export const addBlockedDate = (
     clientName: targetName.trim() || undefined,
     clientPhone: targetPhone.trim() || undefined,
     reason: targetReason.trim() || undefined,
+    type: targetType,
     createdAt: new Date().toISOString(),
   };
 
@@ -159,7 +165,8 @@ export const toggleDateStatus = (
   dateStr: string,
   reason?: string,
   clientName?: string,
-  clientPhone?: string
+  clientPhone?: string,
+  type?: 'reservation' | 'seasonal'
 ): { updatedDates: BlockedDate[]; isNowBlocked: boolean } => {
   const current = getStoredBlockedDates();
   const isBlocked = current.some((d) => d.date === dateStr);
@@ -175,6 +182,7 @@ export const toggleDateStatus = (
         clientName: clientName?.trim() || undefined,
         clientPhone: clientPhone?.trim() || undefined,
         reason: reason?.trim() || 'Fecha reservada / bloqueada',
+        type: type || 'reservation',
         createdAt: new Date().toISOString(),
       },
     ];
@@ -186,6 +194,143 @@ export const toggleDateStatus = (
 export const verifyAdminPin = (inputPin: string): boolean => {
   const cleaned = inputPin.trim();
   return cleaned === DEFAULT_ADMIN_PIN || cleaned === 'chapa2025' || cleaned === 'admin';
+};
+
+export interface MonthPricing {
+  monthIndex: number; // 0-11
+  weekdayPrice: number; // lunes a jueves
+  weekendPrice: number; // viernes a domingo
+}
+
+const PRICING_STORAGE_KEY = 'chapa_month_pricing_v1';
+
+const DEFAULT_PRICING: MonthPricing[] = [
+  { monthIndex: 0, weekdayPrice: 150000, weekendPrice: 220000 }, // Enero
+  { monthIndex: 1, weekdayPrice: 150000, weekendPrice: 220000 }, // Febrero
+  { monthIndex: 2, weekdayPrice: 120000, weekendPrice: 180000 }, // Marzo
+  { monthIndex: 3, weekdayPrice: 120000, weekendPrice: 180000 }, // Abril
+  { monthIndex: 4, weekdayPrice: 90000, weekendPrice: 140000 },  // Mayo
+  { monthIndex: 5, weekdayPrice: 90000, weekendPrice: 140000 },  // Junio
+  { monthIndex: 6, weekdayPrice: 90000, weekendPrice: 140000 },  // Julio
+  { monthIndex: 7, weekdayPrice: 90000, weekendPrice: 140000 },  // Agosto
+  { monthIndex: 8, weekdayPrice: 120000, weekendPrice: 180000 }, // Septiembre
+  { monthIndex: 9, weekdayPrice: 120000, weekendPrice: 180000 }, // Octubre
+  { monthIndex: 10, weekdayPrice: 150000, weekendPrice: 220000 },// Noviembre
+  { monthIndex: 11, weekdayPrice: 150000, weekendPrice: 220000 },// Diciembre
+];
+
+export const getMonthPricing = (): MonthPricing[] => {
+  try {
+    const data = localStorage.getItem(PRICING_STORAGE_KEY);
+    if (!data) {
+      localStorage.setItem(PRICING_STORAGE_KEY, JSON.stringify(DEFAULT_PRICING));
+      return DEFAULT_PRICING;
+    }
+    return JSON.parse(data);
+  } catch {
+    return DEFAULT_PRICING;
+  }
+};
+
+export const saveMonthPricing = (pricing: MonthPricing[]): void => {
+  try {
+    localStorage.setItem(PRICING_STORAGE_KEY, JSON.stringify(pricing));
+  } catch (error) {
+    console.error('Error saving pricing to localStorage', error);
+  }
+};
+
+export const isWeekendDay = (dateStr: string): boolean => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const day = dateObj.getDay(); // 0: Dom, 1: Lun, ..., 5: Vie, 6: Sáb
+  return day === 0 || day === 5 || day === 6; // Viernes, Sábado y Domingo se consideran fin de semana para eventos
+};
+
+export const calculateDatePrice = (dateStr: string, pricingList: MonthPricing[]): number => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const monthIdx = m - 1;
+  const isWeekend = isWeekendDay(dateStr);
+  
+  const monthConfig = pricingList.find((p) => p.monthIndex === monthIdx) || pricingList[monthIdx];
+  if (!monthConfig) return 0;
+  
+  return isWeekend ? monthConfig.weekendPrice : monthConfig.weekdayPrice;
+};
+
+// Mass block range helper
+export const addBlockedDateRange = (
+  startDateStr: string,
+  endDateStr: string,
+  reason: string,
+  clientName?: string,
+  clientPhone?: string,
+  type?: 'reservation' | 'seasonal'
+): BlockedDate[] => {
+  const current = getStoredBlockedDates();
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
+  
+  const updated = [...current];
+  
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateKey = formatDateKey(d);
+    const existingIdx = updated.findIndex((item) => item.date === dateKey);
+    const newEntry: BlockedDate = {
+      date: dateKey,
+      clientName: clientName?.trim() || undefined,
+      clientPhone: clientPhone?.trim() || undefined,
+      reason: reason.trim() || 'Bloqueo administrativo',
+      type: type || 'reservation',
+      createdAt: new Date().toISOString(),
+    };
+    
+    if (existingIdx >= 0) {
+      updated[existingIdx] = { ...updated[existingIdx], ...newEntry };
+    } else {
+      updated.push(newEntry);
+    }
+  }
+  
+  saveBlockedDates(updated);
+  return updated;
+};
+
+// Mass block month helper
+export const addBlockedMonth = (
+  year: number,
+  monthIndex: number,
+  reason: string,
+  clientName?: string,
+  clientPhone?: string,
+  type?: 'reservation' | 'seasonal'
+): BlockedDate[] => {
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const current = getStoredBlockedDates();
+  const updated = [...current];
+  
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateObj = new Date(year, monthIndex, day);
+    const dateKey = formatDateKey(dateObj);
+    const existingIdx = updated.findIndex((item) => item.date === dateKey);
+    const newEntry: BlockedDate = {
+      date: dateKey,
+      clientName: clientName?.trim() || undefined,
+      clientPhone: clientPhone?.trim() || undefined,
+      reason: reason.trim() || 'Bloqueo mensual administrativo',
+      type: type || 'seasonal', // Por defecto estacional para mes completo
+      createdAt: new Date().toISOString(),
+    };
+    
+    if (existingIdx >= 0) {
+      updated[existingIdx] = { ...updated[existingIdx], ...newEntry };
+    } else {
+      updated.push(newEntry);
+    }
+  }
+  
+  saveBlockedDates(updated);
+  return updated;
 };
 
 export const getAdminAuthStatus = (): boolean => {

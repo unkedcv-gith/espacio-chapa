@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Camera, ZoomIn, X, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { Camera, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface GalleryPhoto {
   id: string;
@@ -165,10 +165,10 @@ export const GalleryStrip: React.FC = () => {
           <span>Galería de Momentos</span>
         </div>
         <h3 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-          Vení a vivirlo en fotos
+          Vivilo en fotos
         </h3>
         <p className="text-slate-300 text-xs sm:text-sm mt-2 max-w-xl mx-auto leading-relaxed drop-shadow-sm">
-          Paseá por las postales de nuestro predio. Posate sobre cualquier foto o hacé clic para verla en pantalla completa.
+          Paseá por las postales de nuestro predio. Hacé clic en cualquier foto para verla en pantalla completa.
         </p>
       </div>
 
@@ -195,46 +195,15 @@ export const GalleryStrip: React.FC = () => {
               <div
                 key={`${photo.id}-${index}`}
                 onClick={() => setActivePhotoIndex(originalIndex)}
-                className="group/card relative w-64 sm:w-80 md:w-96 h-44 sm:h-56 md:h-64 flex-shrink-0 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-xl transition-all duration-300 hover:scale-[1.04] hover:-translate-y-1.5 hover:border-cyan-400/80 hover:shadow-2xl hover:shadow-cyan-950/50 cursor-pointer"
+                className="group/card relative w-64 sm:w-80 md:w-96 h-44 sm:h-56 md:h-64 flex-shrink-0 rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-800/80 bg-slate-900 shadow-xl transition-all duration-300 hover:scale-[1.03] hover:-translate-y-1 hover:border-cyan-400/80 hover:shadow-2xl hover:shadow-cyan-950/50 cursor-pointer"
               >
-                {/* Photo Image with smooth hover scale */}
+                {/* Clean Photo Image */}
                 <img
                   src={photo.src}
                   alt={photo.alt}
                   loading="lazy"
-                  className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover/card:scale-110"
+                  className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover/card:scale-105"
                 />
-
-                {/* Ambient vignette gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent opacity-80 group-hover/card:opacity-90 transition-opacity" />
-
-                {/* Top Category Tag */}
-                <div className="absolute top-3 left-3 z-10">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/80 text-[10px] sm:text-xs font-semibold text-slate-200 shadow-sm">
-                    <Tag className="w-2.5 h-2.5 text-cyan-400" />
-                    {photo.tag}
-                  </span>
-                </div>
-
-                {/* Center Hover Magnifier Indicator */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-opacity duration-200 z-10 pointer-events-none">
-                  <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs shadow-xl backdrop-blur-md transform scale-90 group-hover/card:scale-100 transition-transform duration-200">
-                    <ZoomIn className="w-4 h-4 stroke-[2.5]" />
-                    <span>Ampliar foto</span>
-                  </div>
-                </div>
-
-                {/* Bottom Title Bar */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 z-10 flex items-end justify-between">
-                  <div>
-                    <h4 className="text-white text-xs sm:text-sm md:text-base font-bold drop-shadow-md">
-                      {photo.title}
-                    </h4>
-                    <p className="text-[10px] sm:text-xs text-slate-300 line-clamp-1 drop-shadow-sm">
-                      {photo.alt}
-                    </p>
-                  </div>
-                </div>
               </div>
             );
           })}
