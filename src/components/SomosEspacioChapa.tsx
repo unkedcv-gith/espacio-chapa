@@ -45,7 +45,9 @@ export const SomosEspacioChapa: React.FC = () => {
 
         {/* Bajada */}
         <p className="text-slate-100 text-lg sm:text-xl md:text-2xl font-normal leading-relaxed max-w-3xl mx-auto mb-14 sm:mb-18 drop-shadow-md">
-          Un lugar distinto, pensado para reunirse, festejar y relajar. Simple, cálido y sin vueltas.
+          Un lugar distinto, pensado para reunirse, festejar y relajar.
+          <br />
+          Simple y cálido.
         </p>
 
         {/* Frase destacada sin recuadro contenedor */}

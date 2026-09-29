@@ -50,7 +50,7 @@ export const Amenities: React.FC<AmenitiesProps> = () => {
             Todo pensado para compartir sin vueltas
           </h2>
           <p className="text-slate-400 text-base sm:text-lg leading-relaxed">
-            Un lugar para reunirse, festejar bien simple y pasar buenos ratos.
+            Un espacio para festejar bien simple y pasar buenos ratos.
           </p>
         </div>
 
